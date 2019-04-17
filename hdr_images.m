@@ -2,7 +2,8 @@ images = load_images();
 exposure_times = [1/30, 1/10, 1/3, 0.62, 1.3, 4];
 curve
 image = generate_hdr_image(images, C, exposure_times);
-imshow(tonemap(image));
+image = gamma_compression(tone_mapping(image));
+imshow(image);
 
 function [images] = load_images()
 images{1} = imread('images/office_1.jpg');
@@ -81,4 +82,12 @@ for x=1:width
         end
     end
 end
+end
+
+function [rgb_image] = tone_mapping(img)
+% Implements Reinhard global tone mapping
+[height, width, ~] = size(img);
+avg_log_luminance = exp(mean2(log(rgb2gray(img))));
+size(avg_log_luminance)
+rgb_image = (0.18/avg_log_luminance)*img;
 end
