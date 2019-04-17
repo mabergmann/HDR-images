@@ -53,10 +53,10 @@ number_of_images = length(ldr_images);
 for i=1:number_of_images
     % Apply gamma expansion since gamma compression is done during conversion from raw to jpg.
     float_img = im2double(ldr_images{i});
-    expanded_image = gamma_expansion(float_img);
+    expanded_image{i} = gamma_expansion(float_img);
     
     % Get the actual irradiance image. This is supposed to revert filters applied by the camera to get better results and consider exposure time.
-    actual_irradiance_images{i} = calculate_actual_irradiance_value(expanded_image, camera_curve, exposure_times(i));
+    actual_irradiance_images{i} = calculate_actual_irradiance_value(expanded_image{i}, camera_curve, exposure_times(i));
 end
 
 %% Processes the HDR image
@@ -68,7 +68,8 @@ for x=1:width
             sum_of_values = 0.0; %% Acumulate all the irradiance. Used later to calculate the average
             for i=1:number_of_images
                 irradiance = actual_irradiance_images{i}(y, x, c);
-                if  irradiance >= 0.01 || irradiance <= 0.09
+                color = expanded_image{i}(y, x, c);
+                if  color >= 0.1 && color <= 0.9
                     used_images = used_images + 1;
                     sum_of_values = sum_of_values + irradiance;
                 end
