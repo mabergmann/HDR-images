@@ -1,8 +1,8 @@
 images = load_images();
 exposure_times = [1/30, 1/10, 1/3, 0.62, 1.3, 4];
 curve
-images = generate_hdr_image(images, C, exposure_times);
-imshow(images{1});
+image = generate_hdr_image(images, C, exposure_times);
+imshow(tonemap(image));
 
 function [images] = load_images()
 images{1} = imread('images/office_1.jpg');
@@ -46,13 +46,39 @@ function [HDR_image] = generate_hdr_image(ldr_images, camera_curve, exposure_tim
 
 %% Initializes useful values
 number_of_images = length(ldr_images);
+[height, width, channels] = size(ldr_images{1});
 
+%% Uses the images to calculate irradiance
 for i=1:number_of_images
-    %% Apply gamma expansion since gamma compression is done during conversion from raw to jpg.
+    % Apply gamma expansion since gamma compression is done during conversion from raw to jpg.
     float_img = im2double(ldr_images{i});
     expanded_image = gamma_expansion(float_img);
-    %% Get the actual irradiance image. This is supposed to revert filters applied by the camera to get better results and consider exposure time.
+    
+    % Get the actual irradiance image. This is supposed to revert filters applied by the camera to get better results and consider exposure time.
     actual_irradiance_images{i} = calculate_actual_irradiance_value(expanded_image, camera_curve, exposure_times(i));
 end
-HDR_image = actual_irradiance_images;
+
+%% Processes the HDR image
+HDR_image = actual_irradiance_images{1}; %initialize
+for x=1:width
+    for y=1:height
+        for c=1:channels
+            used_images = 0; %% Count the images that didn't saturated
+            sum_of_values = 0.0; %% Acumulate all the irradiance. Used later to calculate the average
+            for i=1:number_of_images
+                irradiance = actual_irradiance_images{i}(y, x, c);
+                if  irradiance >= 0.01 || irradiance <= 0.09
+                    used_images = used_images + 1;
+                    sum_of_values = sum_of_values + irradiance;
+                end
+            end
+            
+            if used_images > 0
+                HDR_image(y, x, c) = sum_of_values / used_images;
+            else
+                HDR_image(y, x, c) = irradiance;
+            end     
+        end
+    end
+end
 end
